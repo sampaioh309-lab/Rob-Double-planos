@@ -11,7 +11,7 @@ html,body{width:100%;height:100%;margin:0}
 
 body{
 background:#020617;
-font-family:Arial;
+font-family:Arial, sans-serif;
 color:#e5e7eb;
 overflow:hidden
 }
@@ -488,7 +488,7 @@ drops[i]++
 }
 setInterval(draw,33)
 
-/* BANCO DE DADOS COMPLETO DE TOKENS DE ATIVAÇÃO */
+/* BANCO DE DADOS DE TOKENS DE ATIVAÇÃO */
 const BANCO_TOKENS = {
     semanal: [
         "A1B2C3", "4D5E6F", "G7H8J9", "K0L1M2", "N3P4Q5", 
@@ -525,29 +525,40 @@ localStorage.setItem("roboBlaze_v12_comercial", JSON.stringify({greens,losses,br
 }
 
 function carregarDados(){
-let d=JSON.parse(localStorage.getItem("roboBlaze_v12_comercial"))
-if(!d) {
-    configApp.validadePlano = Date.now() + (10 * 60 * 1000)
-    configApp.isPremium = false
-    configApp.recargaGasta = false
-    salvarDados()
-    atualizarGraficoMinutos()
-    return
+let d = null;
+try {
+    d = JSON.parse(localStorage.getItem("roboBlaze_v12_comercial"));
+} catch(e) { console.error(e); }
+
+if(d) {
+    greens = d.greens || 0;
+    losses = d.losses || 0;
+    brancos = d.brancos || 0;
+    historico = d.historico || [];
+    if(d.minutosFortesBrancos && d.minutosFortesBrancos.length === 10) {
+        minutosFortesBrancos = d.minutosFortesBrancos;
+    }
+    if(d.configApp) {
+        configApp = Object.assign({}, configApp, d.configApp);
+    }
 }
-greens=d.greens||0
-losses=d.losses||0
-brancos=d.brancos||0
-historico=d.historico||[]
-if(d.minutosFortesBrancos) minutosFortesBrancos = d.minutosFortesBrancos
-if(d.configApp) configApp = d.configApp
+
+// Prevenção absoluta contra falhas de propriedades indefinidas (Anti-Crash)
+if(!configApp.listaPadroesManuais) {
+    configApp.listaPadroesManuais = [{ seq: "BRBRB", alvo: "R" }];
+}
+if(!configApp.validadePlano) {
+    configApp.validadePlano = Date.now() + (10 * 60 * 1000);
+}
 
 document.getElementById("greens").innerText=greens
 document.getElementById("losses").innerText=losses
 document.getElementById("brancos").innerText=brancos
 
-document.getElementById("tipoEstrategia").value = configApp.tipo
-document.getElementById("customCasas").value = configApp.casasCustom || 5
-document.getElementById("customCondicao").value = configApp.condicaoCustom || "mesma"
+if(document.getElementById("tipoEstrategia")) document.getElementById("tipoEstrategia").value = configApp.tipo || "fixa";
+if(document.getElementById("customCasas")) document.getElementById("customCasas").value = configApp.casasCustom || 5;
+if(document.getElementById("customCondicao")) document.getElementById("customCondicao").value = configApp.condicaoCustom || "mesma";
+
 atualizarListaVisualEstrategias()
 alternarCamposEstrategia()
 atualizarGraficoMinutos()
@@ -683,7 +694,7 @@ function copiarChavePix() {
     })
 }
 
-/* SISTEMA UNIFICADO DE VALIDAÇÃO DE TOKENS (LISTAS + RECARGA EXTRA) */
+/* VALIDAÇÃO DE TOKENS */
 function validarTokenAcesso() {
     const tokenDigitado = document.getElementById("inputTokenAtivacao").value.trim().toUpperCase()
     
@@ -692,7 +703,6 @@ function validarTokenAcesso() {
         return
     }
 
-    // 1. CHECAGEM DO TOKEN DE RECARGA ÚNICA DE SUPORTE (10 MINUTOS)
     if(tokenDigitado === "TK-98F2X") {
         if(configApp.isPremium) {
             alert("Você já é um membro Premium! Não precisa usar chaves de teste.");
@@ -704,9 +714,8 @@ function validarTokenAcesso() {
             return;
         }
         
-        // Ativa mais 10 minutos de teste
         configApp.validadePlano = Date.now() + (10 * 60 * 1000)
-        configApp.recargaGasta = true // Bloqueia esse código permanentemente neste aparelho
+        configApp.recargaGasta = true
         configApp.isPremium = false
         salvarDados()
         verificarAssinatura()
@@ -715,7 +724,6 @@ function validarTokenAcesso() {
         return;
     }
 
-    // 2. CHECAGEM DAS LISTAS DO BANCO DE DADOS (SEMANAL)
     if(BANCO_TOKENS.semanal.includes(tokenDigitado)) {
         configApp.validadePlano = Date.now() + (7 * 24 * 60 * 60 * 1000)
         configApp.isPremium = true
@@ -726,7 +734,6 @@ function validarTokenAcesso() {
         return;
     }
 
-    // 3. CHECAGEM DAS LISTAS DO BANCO DE DADOS (MENSAL)
     if(BANCO_TOKENS.mensal.includes(tokenDigitado)) {
         configApp.validadePlano = Date.now() + (30 * 24 * 60 * 60 * 1000)
         configApp.isPremium = true
@@ -737,8 +744,7 @@ function validarTokenAcesso() {
         return;
     }
 
-    // Se passou por tudo e não bateu com nada
-    alert("❌ Token inválido! Envie o comprovante do PIX para o Henrique no WhatsApp para receber um token válido.");
+    alert("❌ Token inválido! Envie o comprovante do PIX no WhatsApp para receber um token válido.");
 }
 
 function abrirDesempenho(){ if(verificarAssinatura()) document.getElementById("desempenho").style.display="flex" }
@@ -779,7 +785,7 @@ function atualizarListaVisualEstrategias() {
 const container = document.getElementById("listaPadroesContainer")
 if(!container) return
 container.innerHTML = ""
-if(configApp.listaPadroesManuais.length === 0) {
+if(!configApp.listaPadroesManuais || configApp.listaPadroesManuais.length === 0) {
 container.innerHTML = "<div style='color:#64748b; font-size:11px; text-align:center; padding: 10px;'>Nenhum padrão cadastrado.</div>"
 return
 }
@@ -794,7 +800,7 @@ container.innerHTML += `<div class="item-padrao"><span><b>${visualGatilho}</b> �
 function salvarEstrategia(){
 configApp.tipo = document.getElementById("tipoEstrategia").value
 configApp.casasCustom = parseInt(document.getElementById("customCasas").value) || 5
-configApp.condicaoCustom = document.getElementById("customCodicao").value
+configApp.condicaoCustom = document.getElementById("customCondicao").value
 salvarDados()
 fecharTela("estrategias")
 resetar()
@@ -818,4 +824,187 @@ document.getElementById("conteudoLista").innerHTML=""
 
 function registrar(tipo,cor,galeUsado){
 let agora=new Date()
-historico
+historico.push({
+tipo, cor,
+hora:agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}),
+data:agora.toLocaleDateString("pt-BR"),
+gale:galeUsado
+})
+salvarDados()
+}
+
+function renderizarLinha(){
+const defense = document.getElementById("linha")
+if(!defense) return
+defense.innerHTML=""
+seq.forEach(c=>{
+let el=document.createElement("span")
+el.innerText=c==="R"?"🔴":c==="B"?"⚫":"⚪"
+defense.appendChild(el)
+})
+defense.scrollLeft=defense.scrollWidth
+}
+
+function add(c){
+if(!verificarAssinatura()) return
+const result = document.getElementById("result")
+
+if(sinal !== null){
+seq.push(c)
+if(seq.length > 40) seq.shift() 
+renderizarLinha()
+
+if(c === "W"){
+greens++; brancos++; 
+document.getElementById("greens").innerText=greens; 
+document.getElementById("brancos").innerText=brancos
+mapearMinutoBranco() 
+registrar("green","W",gale)
+result.innerHTML="<div class='green-chamativo'>⚪🟢 GREEN BRANCO</div>"
+resetar()
+return
+}
+
+if(c === sinal){
+greens++; document.getElementById("greens").innerText=greens
+registrar("green",sinal,gale)
+result.innerHTML="<div class='green-chamativo'>🟢 GREEN</div>"
+resetar()
+return
+} else {
+if(gale === 0){
+gale = 1
+result.innerHTML = "♻️ ENTRAR G1<br><small>Aposte novamente na mesma cor</small>"
+return 
+} else {
+losses++; document.getElementById("losses").innerText=losses
+registrar("loss",sinal,gale)
+result.innerHTML = "❌ LOSS"
+resetar()
+return
+}
+}
+}
+
+seq.push(c)
+if(seq.length > 40) seq.shift() 
+renderizarLinha()
+
+if(c === "W") {
+    mapearMinutoBranco()
+}
+
+if(!emAnalise) return
+
+let historicoTexto = seq.join("");
+let historicoSemBrancos = seq.filter(x => x !== "W").join("");
+
+let corAlvoAposta = "";
+let motivoPadrao = "";
+
+if(configApp.tipo === "fixa") {
+    if(historicoTexto.endsWith("RRBBR")) { corAlvoAposta = "R"; motivoPadrao = "🔴🔴⚫⚫🔴"; }
+    else if(historicoTexto.endsWith("BBRRB")) { corAlvoAposta = "B"; motivoPadrao = "⚫⚫🔴🔴⚫"; }
+    else if(historicoTexto.endsWith("RBRBR")) { corAlvoAposta = "R"; motivoPadrao = "🔴⚫🔴⚫🔴"; }
+    else if(historicoTexto.endsWith("BRBRB")) { corAlvoAposta = "B"; motivoPadrao = "⚫🔴⚫🔴⚫"; }
+    else if(historicoTexto.endsWith("RRRBBBR")) { corAlvoAposta = "R"; motivoPadrao = "🔴🔴🔴⚫⚫⚫🔴"; }
+    else if(historicoTexto.endsWith("BBBRRRB")) { corAlvoAposta = "B"; motivoPadrao = "⚫⚫⚫🔴🔴🔴⚫"; }
+    else if(historicoTexto.endsWith("WWW")) { corAlvoAposta = "R"; motivoPadrao = "⚪⚪⚪"; }
+    else if(historicoTexto.endsWith("RRRR")) { corAlvoAposta = "B"; motivoPadrao = "🔴🔴🔴🔴"; }
+    else if(historicoTexto.endsWith("BBBB")) { corAlvoAposta = "R"; motivoPadrao = "⚫⚫⚫⚫"; }
+} 
+else if(configApp.tipo === "custom") {
+    let totalCasas = configApp.casasCustom || 5;
+    if(historicoSemBrancos.length >= totalCasas) {
+        let padraoGatilho = historicoSemBrancos.slice(-totalCasas);
+        let ultimaCorDestePadrao = padraoGatilho.slice(-1); 
+        if(configApp.condicaoCustom === "mesma") {
+            corAlvoAposta = ultimaCorDestePadrao;
+            motivoPadrao = "Dinâmico (Seguir)";
+        } else {
+            corAlvoAposta = (ultimaCorDestePadrao === "R") ? "B" : "R";
+            motivoPadrao = "Dinâmico (Inverter)";
+        }
+    }
+} 
+else if(configApp.tipo === "manual") {
+    if(configApp.listaPadroesManuais && configApp.listaPadroesManuais.length > 0) {
+        for(let i = 0; i < configApp.listaPadroesManuais.length; i++) {
+            let item = configApp.listaPadroesManuais[i];
+            if(historicoTexto.endsWith(item.seq)) {
+                corAlvoAposta = item.alvo;
+                let visualGatilho = item.seq.split("").map(l => l==="R"?"🔴":l==="B"?"⚫":"⚪").join("");
+                motivoPadrao = `Lista: ${visualGatilho}`;
+                break;
+            }
+        }
+    }
+}
+
+if(corAlvoAposta !== "") {
+sinal = corAlvoAposta
+emAnalise = false
+result.innerHTML=`<small style="color:#00aaff; font-size:10px;">⚡ GATILHO DETECTADO: ${motivoPadrao}</small>
+<div style="font-size:15px; margin-top:2px;">📡 SINAL: Apostar ${sinal==="R"?"🔴 Vermelho":"⚫ Preto"}</div>
+<div style="font-size:11px; color:#94a3b8;">♻️ Até G1 | ⚪ Proteção no Branco</div>`
+}
+}
+
+function resetar(){ sinal=null; gale=0; emAnalise=true }
+
+function verLista(){
+const desempenho=document.getElementById("desempenho")
+const lista=document.getElementById("lista")
+const conteudoLista=document.getElementById("conteudoLista")
+const tituloLista=document.getElementById("tituloLista")
+
+desempenho.style.display="none"
+lista.style.display="flex"
+conteudoLista.innerHTML=""
+
+let agrupado={}
+historico.forEach(h=>{
+let data=h.data||"Antigos"
+if(!agrupado[data]) agrupado[data]=[]
+agrupado[data].push(h)
+})
+
+Object.keys(agrupado).reverse().forEach(data=>{
+let itens=agrupado[data]
+function montar(listaItens,titulo){
+if(listaItens.length===0)return""
+return `
+<div style="margin-top:10px">
+<b>${titulo} ${listaItens.length}</b>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:5px">
+${listaItens.map(i=>{
+let bg=i.cor==="R"?"#ef4444":i.cor==="B"?"#111":"#f1f1f1"
+let cor=i.cor==="W"?"#000":"#fff"
+let emoji=i.cor==="R"?"🔴":i.cor==="B"?"⚫":"⚪"
+return `<div style="border-radius:8px;background:${bg};color:${cor};padding:6px;text-align:center;font-size:11px;font-weight:bold"><div>${i.hora}</div><div style="font-size:16px">${emoji}</div></div>`
+}).join("")}
+</div>
+</div>`
+}
+conteudoLista.innerHTML+=`<div style="grid-column:span 5;padding:10px;border-bottom:1px solid #333;text-align:left"><div style="color:#00aaff;font-weight:bold;margin-bottom:5px">${data}</div>${montar(itens.filter(h=>h.tipo==="green"&&h.cor!=="W"),"🟢 GREEN")}${montar(itens.filter(h=>h.tipo==="loss"),"🔴 LOSS")}${montar(itens.filter(h=>h.cor==="W"),"⚪ BRANCO")}</div>`
+})
+tituloLista.innerText="HISTÓRICO"
+}
+
+function atualizarHora(){
+let agora=new Date()
+const horaEl = document.getElementById("hora")
+if(horaEl) horaEl.innerText="🕒 "+agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    carregarDados()
+    verificarAssinatura()
+    setInterval(atualizarHora,1000)
+    setInterval(verificarAssinatura, 3000)
+    setInterval(verificarMinutoAlvoAtual, 10000)
+});
+</script>
+
+</body>
+</html>
