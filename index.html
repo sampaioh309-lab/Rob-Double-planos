@@ -352,6 +352,7 @@ Reset
 
 <div id="result">⏸️ AGUARDAR PADRÃO</div>
 
+<!-- PAINEL VISUAL DE MINUTOS FORTES BRANCOS -->
 <div class="painel-minutos">
 <div class="topo-minutos">
 <span>📊 MINUTOS FORTES</span>
@@ -368,6 +369,7 @@ Reset
 
 </div>
 
+<!-- DESEMPENHO -->
 <div id="desempenho">
 <h2>📊 DESEMPENHO</h2>
 <button onclick="verLista()" style="width:200px; margin-bottom:10px;">📅 Ver Histórico</button>
@@ -375,12 +377,14 @@ Reset
 <button onclick="fecharTela('desempenho')" style="width:200px; background:#334155; color:#fff">Fechar</button>
 </div>
 
+<!-- LISTA -->
 <div id="lista">
 <h2 id="tituloLista"></h2>
 <div id="conteudoLista" class="grade"></div>
 <button onclick="voltarLista()" style="width:200px; background:#334155; color:#fff">Voltar</button>
 </div>
 
+<!-- CONFIGURAÇÃO DE ESTRATÉGIAS -->
 <div id="estrategias">
 <h2 style="font-size: 18px; margin-bottom: 15px;">⚙️ CONFIGURAR PADRÕES</h2>
 
@@ -392,6 +396,7 @@ Reset
 <option value="manual">Criar Próprios Padrões (Multi-Gatilhos)</option>
 </select>
 
+<!-- Campos da Estratégia Customizada -->
 <div id="camposCustomizados" style="display:none;">
 <label>Quantidade de casas para trás para analisar:</label>
 <input type="number" id="customCasas" value="5" min="2" max="10">
@@ -403,6 +408,7 @@ Reset
 </select>
 </div>
 
+<!-- MÓDULO MULTI-PADRÕES SIMULTÂNEOS -->
 <div id="camposManuais" style="display:none;">
 <div style="border: 1px dashed #334155; padding: 10px; border-radius: 8px; margin-top: 10px; background: #0b0f19;">
 <label style="color:#00aaff; font-weight:bold; margin-top:0;">Novo Gatilho de Cores:</label>
@@ -428,10 +434,11 @@ Reset
 </div>
 </div>
 
+<!-- TELA DE BLOQUEIO / PAGAMENTO -->
 <div id="bloqueioPlano">
 <h2 id="statusBloqueioTitulo" style="color:#ef4444; font-size:26px; margin: 0 0 5px 0;">⚠️ TESTE EXPIRADO</h2>
 <p id="statusBloqueioTexto" style="max-width:320px; font-size:13px; color:#94a3b8; margin: 0 0 15px 0;">
-Seus 10 minutos de teste gratuito acabaram. Escolha um plano abaixo para liberar o acesso vitalício à nossa I.A.
+Seus minutos de teste gratuito acabaram. Escolha um plano abaixo para liberar o acesso vitalício à nossa I.A.
 </p>
 
 <div class="card-config" style="width:100%; max-width:360px;">
@@ -442,6 +449,7 @@ Seus 10 minutos de teste gratuito acabaram. Escolha um plano abaixo para liberar
         <option value="mensal">Plano Mensal - R$ 149,90</option>
     </select>
 
+    <!-- Menu dinâmico de pagamento do PIX -->
     <div id="boxInstrucoesPix" class="box-checkout">
         <p style="font-size:12px; margin:0 0 5px 0; color:#facc15;">Chave PIX (Telefone):</p>
         <b style="font-size:16px; color:#fff; display:block; letter-spacing:1px;">11987401582</b>
@@ -452,7 +460,7 @@ Seus 10 minutos de teste gratuito acabaram. Escolha um plano abaixo para liberar
     </div>
 
     <label style="color:#fff; font-weight:bold; font-size:13px; margin-top:15px;">2. Digite sua Chave de Ativação (6 dígitos):</label>
-    <input type="text" id="inputTokenAtivacao" placeholder="Ex: X2Y4Z6" maxlength="6" style="text-transform:uppercase; text-align:center; font-size:16px; font-weight:bold; color:#00aaff;">
+    <input type="text" id="inputTokenAtivacao" placeholder="Ex: X2Y4Z6" maxlength="10" style="text-transform:uppercase; text-align:center; font-size:16px; font-weight:bold; color:#00aaff;">
     <button onclick="validarTokenAcesso()" style="margin-top:10px; background:#00aaff; color:#000; width:100%; padding:10px; font-size:13px;">🔓 Ativar Robô Agora</button>
 </div>
 </div>
@@ -488,7 +496,7 @@ drops[i]++
 }
 setInterval(draw,33)
 
-/* BANCO DE DADOS DE TOKENS DE ACTIVACAO (6 DÍGITOS MISTURANDO LETRAS E NÚMEROS) */
+/* BANCO DE DADOS DE TOKENS DE ATIVAÇÃO */
 const BANCO_TOKENS = {
     semanal: [
         "A1B2C3", "4D5E6F", "G7H8J9", "K0L1M2", "N3P4Q5", 
@@ -516,7 +524,8 @@ casasCustom: 5,
 condicaoCustom: "mesma",
 listaPadroesManuais: [{ seq: "BRBRB", alvo: "R" }],
 validadePlano: null,
-isPremium: false
+isPremium: false,
+recargaGasta: false 
 }
 
 function salvarDados(){
@@ -526,9 +535,9 @@ localStorage.setItem("roboBlaze_v12_comercial", JSON.stringify({greens,losses,br
 function carregarDados(){
 let d=JSON.parse(localStorage.getItem("roboBlaze_v12_comercial"))
 if(!d) {
-    // Configura os 10 minutos iniciais de teste gratuito
     configApp.validadePlano = Date.now() + (10 * 60 * 1000)
     configApp.isPremium = false
+    configApp.recargaGasta = false
     salvarDados()
     atualizarGraficoMinutos()
     return
@@ -571,24 +580,17 @@ document.getElementById("totalBrancosGrafico").innerText = totalBrancos
 
 let maxValor = 0;
 for(let i=0; i<10; i++) {
-    if(minutosFortesBrancos[i] > maxValor) maxValor = minutosFortesBrancos[i];
+    if(minutosFortesBrancos[i] > maxValor) maxValor = minutosFortesBrancos[i] || 0;
 }
 
 for(let i=0; i<=9; i++) {
-    let qtd = minutosFortesBrancos[i]
+    let qtd = minutosFortesBrancos[i] || 0
     let pct = 0
     let classeCor = ""
 
-    if (qtd === 1) {
-        pct = 25
-        classeCor = "barra-laranja"
-    } else if (qtd === 2) {
-        pct = 50
-        classeCor = "barra-amarela"
-    } else if (qtd >= 3) {
-        pct = 100
-        classeCor = "barra-verde"
-    }
+    if (qtd === 1) { pct = 25; classeCor = "barra-laranja"; } 
+    else if (qtd === 2) { pct = 50; classeCor = "barra-amarela"; } 
+    else if (qtd >= 3) { pct = 100; classeCor = "barra-verde"; }
 
     let esDestaque = (qtd === maxValor && maxValor > 0) ? "destaque" : ""
 
@@ -637,7 +639,7 @@ if (!configApp.validadePlano || ago > configApp.validadePlano) {
         statusPlano.innerText = "Plano: EXPIRADO"
     } else {
         titBloqueio.innerText = "⚠️ TESTE EXPIRADO"
-        txtBloqueio.innerText = "Seus 10 minutos de teste gratuito acabaram. Escolha um plano abaixo para liberar o acesso à nossa I.A."
+        txtBloqueio.innerText = "Seus minutos de teste gratuito acabaram. Escolha um plano abaixo ou insira sua chave de liberação."
         statusPlano.innerText = "Plano: TESTE ACABOU"
     }
     statusPlano.style.color = "#ef4444"
@@ -677,8 +679,7 @@ function selecionarPlanoLoja() {
     boxPix.style.display = "block"
     let nomePlano = plano === 'semanal' ? 'Semanal (R$ 49,90)' : 'Mensal (R$ 149,90)'
     
-    // Configura o link de redirecionamento dinâmico do WhatsApp
-    let mensagemTexto = encodeURIComponent(`Olá Henrique! Realizei o pagamento do PIX para o Plano ${nomePlano}. Segue o comprovante em anexo. Aguardo meu código de 6 dígitos para liberação!`)
+    let mensagemTexto = encodeURIComponent(`Olá Henrique! Realizei o pagamento do PIX para o Plano ${nomePlano}. Segue o comprovante em anexo. Aguardo meu código de liberação!`)
     linkWpp.href = `https://wa.me/5511987401582?text=${mensagemTexto}`
 }
 
@@ -690,38 +691,61 @@ function copiarChavePix() {
     })
 }
 
-/* VALIDACAO DE TOKENS */
+/* VALIDAÇÃO DE TOKENS (COM O NOVO TOKEN ALEATÓRIO DE RECARGA DE TESTE) */
 function validarTokenAcesso() {
     const tokenDigitado = document.getElementById("inputTokenAtivacao").value.trim().toUpperCase()
     
-    if(tokenDigitado.length !== 6) {
-        alert("Erro: O token precisa conter exatamente 6 caracteres (letras e números)!")
+    if(tokenDigitado.length < 4) {
+        alert("Erro: Token inválido!")
         return
     }
 
-    // Verifica se pertence ao plano Semanal
+    // NOVO TOKEN ALEATÓRIO DE SUPORTE (RECARGA ÚNICA DE 10 MINUTOS)
+    if(tokenDigitado === "TK-98F2X") {
+        if(configApp.isPremium) {
+            alert("Você já é um membro Premium! Não precisa usar chaves de teste.");
+            return;
+        }
+        if(configApp.recargaGasta === true) {
+            alert("❌ Erro: Este aparelho já utilizou a recarga de teste extra permitida!");
+            document.getElementById("inputTokenAtivacao").value = ""
+            return;
+        }
+        
+        // Ativa mais 10 minutos de teste
+        configApp.validadePlano = Date.now() + (10 * 60 * 1000)
+        configApp.recargaGasta = true // Queima o código para este aparelho
+        configApp.isPremium = false
+        salvarDados()
+        verificarAssinatura()
+        alert("🔄 TOKEN DE SUPORTE ACEITO! Mais 10 minutos de teste liberados.");
+        document.getElementById("inputTokenAtivacao").value = ""
+        return;
+    }
+
+    // Validação Plano Semanal
     if(BANCO_TOKENS.semanal.includes(tokenDigitado)) {
-        configApp.validadePlano = Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 Dias
+        configApp.validadePlano = Date.now() + (7 * 24 * 60 * 60 * 1000)
         configApp.isPremium = true
         salvarDados()
         verificarAssinatura()
         alert("🎉 PARABÉNS! Plano Semanal Ativado por 7 Dias!")
         document.getElementById("inputTokenAtivacao").value = ""
-        return
+        return;
     }
 
-    // Verifica se pertence ao plano Mensal
+    // Validação Plano Mensal
     if(BANCO_TOKENS.mensal.includes(tokenDigitado)) {
-        configApp.validadePlano = Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 Dias
+        configApp.validadePlano = Date.now() + (30 * 24 * 60 * 60 * 1000)
         configApp.isPremium = true
         salvarDados()
         verificarAssinatura()
         alert("👑 INCRÍVEL! Plano Mensal Premium Ativado por 30 Dias!")
         document.getElementById("inputTokenAtivacao").value = ""
-        return
+        return;
     }
 
-    alert("❌ Token inválido ou já utilizado! Se fez o PIX, aguarde Henrique te enviar o código correto via WhatsApp.")
+    alert("❌ Token inválido! Envie o comprovante do PIX para o Henrique no WhatsApp para receber um token válido.");
 }
 
 function abrirDesempenho(){ if(verificarAssinatura()) document.getElementById("desempenho").style.display="flex" }
@@ -773,6 +797,7 @@ container.innerHTML += `<div class="item-padrao"><span><b>${visualGatilho}</b> �
 })
 }
 
+/* CONTROLES INTERNOS */
 function salvarEstrategia(){
 configApp.tipo = document.getElementById("tipoEstrategia").value
 configApp.casasCustom = parseInt(document.getElementById("customCasas").value) || 5
@@ -783,6 +808,7 @@ resetar()
 document.getElementById("result").innerHTML = "⏸️ PADRÕES SALVOS"
 }
 
+/* PLACAR */
 function resetarPlacar(){
 greens=0;losses=0;brancos=0; minutosFortesBrancos=[0,0,0,0,0,0,0,0,0,0]
 document.getElementById("greens").innerText=0; document.getElementById("losses").innerText=0; document.getElementById("brancos").innerText=0
@@ -790,7 +816,6 @@ salvarDados()
 atualizarGraficoMinutos()
 }
 
-/* RESTO DO MECANISMO CORE */
 function resetarDesempenho(){
 if(!confirm("Apagar desempenho?")) return
 historico=[]
@@ -810,14 +835,14 @@ salvarDados()
 }
 
 function renderizarLinha(){
-const linha = document.getElementById("linha")
-linha.innerHTML=""
+const defense = document.getElementById("linha")
+defense.innerHTML=""
 seq.forEach(c=>{
 let el=document.createElement("span")
 el.innerText=c==="R"?"🔴":c==="B"?"⚫":"⚪"
-linha.appendChild(el)
+defense.appendChild(el)
 })
-linha.scrollLeft=linha.scrollWidth
+defense.scrollLeft=defense.scrollWidth
 }
 
 function add(c){
@@ -975,7 +1000,7 @@ window.addEventListener('DOMContentLoaded', () => {
     carregarDados()
     verificarAssinatura()
     setInterval(atualizarHora,1000)
-    setInterval(verificarAssinatura, 3000) // Verifica se o tempo acabou a cada 3 segundos
+    setInterval(verificarAssinatura, 3000)
     setInterval(verificarMinutoAlvoAtual, 10000)
 });
 </script>
